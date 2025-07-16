@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Modern Music Player</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(145deg,#121212,#1f1f1f);
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+      transition: background .5s ease-in-out;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      top:0;left:0;right:0;bottom:0;
+      background: linear-gradient(145deg,#1f1f1f,#121212), url('coverBG.jpg');
+      background-blend-mode: overlay;
+      background-size: cover;
+      background-position: center;
+      opacity:.9;
+      filter: blur(3px);
+      z-index:-1;
+    }
+
+    .player {
+      width:400px;
+      background:#181818;
+      border-radius:15px;
+      box-shadow:0 10px 20px rgba(0,0,0,.5);
+      padding:20px;
+      text-align:center;
+	  position: relative;
+	  top: 30px;
+    }
+    .player img {
+      width:100%;
+      border-radius:10px;
+      box-shadow:0 0 10px #1db954,0 0 15px #1db954,0 0 20px #1db954;
+      animation:neonGlow 3s infinite alternate;
+    }
+    @keyframes neonGlow {
+      0% { box-shadow:0 0 10px #1db954,0 0 20px #1db954,0 0 40px #1db954; }
+      50% { box-shadow:0 0 20px #f44336,0 0 40px #f44336,0 0 60px #f44336; }
+      100% { box-shadow:0 0 10px #1db954,0 0 20px #1db954,0 0 40px #1db954; }
+    }
+
+    .marquee {
+      overflow:hidden;
+      white-space:nowrap;
+      width:100%;
+      box-sizing:border-box;
+      padding:5px;
+      border-radius:5px;
+      background:rgba(0,0,0,.5);
+      margin:20px 0 0;
+    }
+    .marquee span {
+      display:inline-block;
+      animation:scrollTitle 10s linear infinite;
+      padding-left:100%;
+    }
+    @keyframes scrollTitle {
+      0% { transform:translateX(0%); }
+      100% { transform:translateX(-100%); }
+    }
+
+    .progress-container {
+      margin-top:20px;
+      background:#333;
+      height:5px;
+      border-radius:5px;
+      cursor:pointer;
+      position:relative;
+    }
+    .progress-bar {
+      height:5px;
+      width:0%;
+      background:linear-gradient(90deg,#1db954,#f44336);
+      border-radius:5px;
+      transition:width .1s ease-in-out;
+    }
+
+    .durations {
+      display:flex;
+      justify-content:space-between;
+      width:100%;
+      margin-top:5px;
+      font-size:14px;
+    }
+    .left-time { margin-left:5px; }
+    .right-time { margin-right:5px; }
+
+    .controls {
+      display:flex;
+      justify-content:space-around;
+      margin-top:20px;
+      position:relative; /* conteneur relatif */
+    }
+    .controls button {
+      background:#282828;
+      border:none;
+      border-radius:50%;
+      width:50px;
+      height:50px;
+      color:#fff;
+      font-size:18px;
+      cursor:pointer;
+      transition:background .3s,transform .2s;
+      position:relative;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .controls button:hover {
+      background:#3a3a3a;
+      transform:scale(1.1);
+    }
+
+    #play { /* position centrale comme conteneur relatif */
+      position:relative;
+    }
+    #loading-spinner {
+      position:absolute;
+      top:50%;
+      left:50%;
+      transform:translate(-50%,-50%);
+      width:60px;
+      height:60px;
+      border:5px solid red;
+      border-top:5px solid purple;
+      border-radius:50%;
+      animation:spin .3s linear infinite,gradient .8s ease infinite;
+      display:none;
+      pointer-events:none;
+      box-sizing:border-box;
+    }
+    @keyframes spin {
+      0% { transform:translate(-50%,-50%) rotate(0deg); }
+      100% { transform:translate(-50%,-50%) rotate(360deg); }
+    }
+    @keyframes gradient {
+      0%,100% { border-top-color:purple; }
+      25% { border-left-color:purple; }
+      50% { border-top-color:blue; }
+      75% { border-top-color:pink; }
+    }
+
+    .url-input {
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      margin-top:20px;
+      position:absolute;
+      top:10px;
+      left:calc(50% - 260px);
+    }
+    #audio-url {
+      width:400px;
+      height:50px;
+      padding:10px;
+      margin-right:15px;
+      background:#2e2e2e;
+      border:2px solid #444;
+      border-radius:30px;
+      color:#fff;
+      font-size:16px;
+      box-shadow:0 4px 8px rgba(0,0,0,.2);
+      transition:all .3s;
+    }
+    #audio-url:focus {
+      border-color:#7a7a7a;
+      background:#333;
+      box-shadow:0 6px 12px rgba(0,0,0,.3);
+      outline:none;
+    }
+    #set-audio {
+      padding:15px 30px;
+      background:#5a5a5a;
+      color:#fff;
+      font-size:16px;
+      border:none;
+      border-radius:30px;
+      cursor:pointer;
+      box-shadow:0 4px 8px rgba(0,0,0,.2);
+      transition:all .3s;
+    }
+    #set-audio:hover {
+      background:#8a8a8a;
+      box-shadow:0 6px 12px rgba(0,0,0,.3);
+    }
+    #set-audio:active {
+      background:#444;
+      box-shadow:0 2px 4px rgba(0,0,0,.2);
+    }
+	.banner {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  height: 3%;
+  background-color: #e3e3ff;
+  color: #333;
+  text-align: center;
+  font-size: 0.9rem;
+  padding: 6px 0;
+  z-index: 9999;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.author {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  gap: 8px;
+}
+
+.author a {
+  text-decoration: none;
+  font-weight: bold;
+  color: #4a4a88;
+}
+
+.author a:hover {
+  text-decoration: underline;
+}
+
+.avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.tooltip {
+  display: none;
+  position: absolute;
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: white;
+  font-size: 0.75rem;
+  padding: 8px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 99999;
+}
+.author-hover-area {
+  position: relative;
+  display: inline-block;
+}
+
+.author-link {
+  position: relative;
+  z-index: 1;
+}
+.markdown-tooltip {
+  display: none;
+  position: absolute;
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #ffffff;
+  color: #333;
+  font-size: 0.75rem;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  white-space: normal;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  width: 220px;
+  text-align: left;
+  z-index: 99999;
+  font-family: 'Courier New', monospace;
+  line-height: 1.4;
+}
+
+.author-hover-area:hover .markdown-tooltip {
+  display: block;
+  opacity: 1;
+  pointer-events: auto;
+}
+  </style>
+</head>
+<body>
+<div class="banner">
+  <div class="author">Par
+    <img src="https://avatars.githubusercontent.com/u/216161349?s=96&v=4" alt="Avatar GitHub" class="avatar">
+    <div class="author-hover-area">
+      <a href="https://timotheaoun.github.io/" target="_blank" class="author-link">Timothé AOUN</a>
+      <div class="tooltip markdown-tooltip">
+        <strong>## Timothé AOUN</strong><br>
+        <em>Développeur passionné</em><br><br>
+        - 💡 Pédagogie inversée<br>
+        - 🧠 Logique & IA<br>
+        - 🛠 Créateur d'outils utiles
+      </div>
+    </div>
+  </div>
+</div>
+
+  <div class="url-input">
+    <input type="text" id="audio-url" placeholder="Entrez une URL de musique (vulnérabilité activée)" />
+    <button id="set-audio">Jouer</button>
+<button id="set-audio" onclick="openCenteredPopup('about.html', 'popup', 600, 400)">
+  Qu'est-ce que c'est ?
+</button>
+
+<script>
+function openCenteredPopup(url, title, w, h) {
+  const dualScreenLeft = window.screenLeft !== undefined ? window.screenLeft : screen.left;
+  const dualScreenTop = window.screenTop !== undefined ? window.screenTop : screen.top;
+
+  const width = window.innerWidth
+      ? window.innerWidth
+      : document.documentElement.clientWidth
+      ? document.documentElement.clientWidth
+      : screen.width;
+  const height = window.innerHeight
+      ? window.innerHeight
+      : document.documentElement.clientHeight
+      ? document.documentElement.clientHeight
+      : screen.height;
+
+  const left = (width - w) / 2 + dualScreenLeft;
+  const top = (height - h) / 2 + dualScreenTop;
+
+  const newWindow = window.open(
+    url,
+    title,
+    `scrollbars=yes, width=${w}, height=${h}, top=${top}, left=${left}`
+  );
+
+  if (window.focus) newWindow.focus();
+}
+</script>
+
+
+  </div>
+  
+
+  <div class="player">
+    <img src="cover.jpg" alt="Album Cover">
+    <div class="marquee">
+      <span id="song-title"><h2>https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3 | Musique libre de droits</h2></span>
+    </div>
+    <div class="progress-container" id="progress-container">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <div class="durations">
+      <span id="current-time" class="left-time">00:00</span>
+      <span id="duration-time" class="right-time">⏳</span>
+    </div>
+    <div class="controls">
+      <button id="prev">&lt;</button>
+      <button id="play">▶
+        <div id="loading-spinner"></div>
+      </button>
+      <button id="next">&gt;</button>
+    </div>
+  </div>
+
+  <audio id="audio" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"></audio>
+
+  <script>
+    const playBtn = document.getElementById('play');
+    const prevBtn = document.getElementById('prev');
+    const nextBtn = document.getElementById('next');
+    const audio = document.getElementById('audio');
+    const progressBar = document.getElementById('progress-bar');
+    const progressContainer = document.getElementById('progress-container');
+    const setAudioBtn = document.getElementById('set-audio');
+    const audioUrlInput = document.getElementById('audio-url');
+    const songTitle = document.getElementById('song-title');
+    const currentTimeElem = document.getElementById('current-time');
+    const durationTimeElem = document.getElementById('duration-time');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    let currentSongNumber = 1;
+
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds/60);
+      const secs = Math.floor(seconds%60);
+      return `${mins<10?'0':''}${mins}:${secs<10?'0':''}${secs}`;
+    }
+
+    function updateAudio(newNumber) {
+      currentSongNumber = Math.max(1,newNumber);
+      const newUrl = `https://www.soundhelix.com/examples/mp3/SoundHelix-Song-${currentSongNumber}.mp3`;
+      audio.src = newUrl;
+      songTitle.innerHTML = `<h2>${newUrl}</h2>`;
+      audio.play();
+      playBtn.textContent = '⏸';
+      playBtn.appendChild(loadingSpinner);
+    }
+
+    prevBtn.addEventListener('click', ()=> updateAudio(currentSongNumber-1));
+    nextBtn.addEventListener('click', ()=> updateAudio(currentSongNumber+1));
+    playBtn.addEventListener('click', ()=>{
+      if (audio.paused) {
+        audio.play();
+        playBtn.textContent = '⏸';
+      } else {
+        audio.pause();
+        playBtn.textContent = '▶';
+      }
+      playBtn.appendChild(loadingSpinner);
+    });
+
+    audio.addEventListener('timeupdate', ()=>{
+      const pct = (audio.currentTime/audio.duration)*100;
+      progressBar.style.width = pct + '%';
+      currentTimeElem.textContent = formatTime(audio.currentTime);
+      if (isNaN(audio.duration)) {
+        durationTimeElem.textContent = '⏳';
+        loadingSpinner.style.display = 'block';
+      } else {
+        durationTimeElem.textContent = formatTime(audio.duration - audio.currentTime);
+        loadingSpinner.style.display = 'none';
+      }
+    });
+
+    audio.addEventListener('loadedmetadata', ()=> loadingSpinner.style.display='none');
+
+    progressContainer.addEventListener('click', e=>{
+      const w = progressContainer.clientWidth;
+      const x = e.offsetX;
+      audio.currentTime = (x/w)*audio.duration;
+    });
+
+    setAudioBtn.addEventListener('click', ()=>{
+      const newUrl = audioUrlInput.value.trim();
+      if (newUrl) {
+        const match = newUrl.match(/SoundHelix-Song-(\d+)/);
+        if (match) currentSongNumber = parseInt(match[1]);
+        audio.src = newUrl;
+        songTitle.innerHTML = `<h2>${newUrl}</h2>`;
+        audio.play();
+        playBtn.textContent = '⏸';
+        playBtn.appendChild(loadingSpinner);
+      } else alert("Veuillez entrer une URL valide.");
+    });
+  </script>
+</body>
+</html>
